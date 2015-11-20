@@ -136,6 +136,10 @@ void loop()
     }
     else if(buf[5] == '6') {
       //received a confirmation response
+      digitalWrite(led,HIGH);
+      delay(250);
+      digitalWrite(led,LOW);
+      delay(250);
       mySerial.println("Got it!");
     }
 
