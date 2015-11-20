@@ -29,8 +29,8 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
-    private static final int SUCCESS_CONNECT = 0;
-    private static final int MESSAGE_READ = 1;
+    public static final int SUCCESS_CONNECT = 0;
+    public static final int MESSAGE_READ = 1;
     public static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     ArrayAdapter<String> listAdapter;
     ArrayList<String> pairedDevices;
@@ -55,14 +55,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 case SUCCESS_CONNECT:
                     //do something
                     ConnectedThread connectedThread = new ConnectedThread((BluetoothSocket)msg.obj);
-                    Toast.makeText(getApplicationContext(), "CONNECTED",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "CONNECTED",Toast.LENGTH_LONG).show();
                     connectedThread.start();
                     break;
                 case MESSAGE_READ:
                     //do something
                     byte[] readBuf = (byte[])msg.obj;
                     String string = new String(readBuf);
-                    Toast.makeText(getApplicationContext(), string,Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), string,Toast.LENGTH_LONG).show();
                     break;
             }
         }
@@ -82,21 +82,23 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 turnOnBluetooth();
             }
             getPairedDevices();
-            startDiscovery();
+            btAdapter.startDiscovery();
         }
     }
 
-    private void startDiscovery() {
+    public void startDiscovery() {
         btAdapter.cancelDiscovery();
         btAdapter.startDiscovery();
     }
 
-    private void turnOnBluetooth() {
+    public void turnOnBluetooth() {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
         startActivityForResult(enableBtIntent, 1);
+        btAdapter.cancelDiscovery();
+        btAdapter.startDiscovery();
     }
 
-    private void getPairedDevices() {
+    public void getPairedDevices() {
         devicesSet = btAdapter.getBondedDevices();
         if(!devicesSet.isEmpty()) {
             for(BluetoothDevice device : devicesSet) {
@@ -106,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
     }
 
-    private void init() {
+    public void init() {
         listView = (ListView)findViewById(R.id.devicesListView);
         listView.setOnItemClickListener(this);
         offBelayButton = (Button)findViewById(R.id.offBelayButton);
@@ -157,14 +159,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     bluetoothDevices.add(device);
-                    String s = "";
-                    for(int j=0; j<=pairedDevices.size(); j++) {
-                        if (pairedDevices.get(j).contains(device.getName())) {
-                            s = " (PAIRED) ";
-                            //break;
-                        }
-                    }
-                    listAdapter.add(device.getName() + device.getAddress() + s);
+                    listAdapter.add(device.getName() + device.getAddress());
                 }
                 else if(BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
                     //code
@@ -208,13 +203,22 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         if(btAdapter.isDiscovering()) {
             btAdapter.cancelDiscovery();
         }
+        if(connectThread != null) {
+            if(connectThread.mmSocket.isConnected()) {
+                try {
+                    Toast.makeText(getApplicationContext(),"Disconnecting",Toast.LENGTH_SHORT). show();
+                    connectThread.mmSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
         BluetoothDevice selectedDevice = bluetoothDevices.get(position);
-        Toast.makeText(getApplicationContext(),selectedDevice.getAddress(),Toast.LENGTH_SHORT). show();
         connectThread = new ConnectThread(selectedDevice);
         connectThread.start();
     }
 
-    private class ConnectThread extends Thread {
+    public class ConnectThread extends Thread {
         public final BluetoothSocket mmSocket;
         public final BluetoothDevice mmDevice;
         public ConnectThread(BluetoothDevice device) {
@@ -252,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             mHandler.obtainMessage(SUCCESS_CONNECT,mmSocket).sendToTarget();
         }
 
-        private void manageConnectedSocket(BluetoothSocket mmSocket) {
+        public void manageConnectedSocket(BluetoothSocket mmSocket) {
             connectedThread = new ConnectedThread(mmSocket);
         }
 
@@ -264,10 +268,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
     }
 
-    private class ConnectedThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
+    public class ConnectedThread extends Thread {
+        public final BluetoothSocket mmSocket;
+        public final InputStream mmInStream;
+        public final OutputStream mmOutStream;
 
         public ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
@@ -321,34 +325,74 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     public void offBelayClicked(ConnectedThread connectedThread) {
-        //if(connectThread.mmDevice.getBondState() == 1) {
-            byte[] buf;
-            buf = "1".getBytes(Charset.forName("UTF-8"));
-            connectedThread.write(buf);
-        //}
-        //else {
-        //    Toast.makeText(getApplicationContext(),"You must first connect bluetooth.",Toast.LENGTH_SHORT). show();
-        //}
+        if(connectThread != null) {
+            if (connectThread.mmSocket.isConnected()) {
+                byte[] buf;
+                buf = "1".getBytes(Charset.forName("UTF-8"));
+                connectedThread.write(buf);
+            } else {
+                Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else {
+            Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+        }
 
     }
     public void haulingRopeClicked(ConnectedThread connectedThread) {
-        byte[] buf;
-        buf = "2".getBytes(Charset.forName("UTF-8"));
-        connectedThread.write(buf);
+        if(connectThread != null) {
+            if (connectThread.mmSocket.isConnected()) {
+                byte[] buf;
+                buf = "2".getBytes(Charset.forName("UTF-8"));
+                connectedThread.write(buf);
+            } else {
+                Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else {
+            Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+        }
     }
     public void thatsMeClicked(ConnectedThread connectedThread) {
-        byte[] buf;
-        buf = "3".getBytes(Charset.forName("UTF-8"));
-        connectedThread.write(buf);
+        if(connectThread != null) {
+            if (connectThread.mmSocket.isConnected()) {
+                byte[] buf;
+                buf = "3".getBytes(Charset.forName("UTF-8"));
+                connectedThread.write(buf);
+            } else {
+                Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else {
+            Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+        }
     }
     public void onBelayClicked(ConnectedThread connectedThread) {
-        byte[] buf;
-        buf = "4".getBytes(Charset.forName("UTF-8"));
-        connectedThread.write(buf);
+        if(connectThread != null) {
+            if (connectThread.mmSocket.isConnected()) {
+                byte[] buf;
+                buf = "4".getBytes(Charset.forName("UTF-8"));
+                connectedThread.write(buf);
+            } else {
+                Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else {
+            Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+        }
     }
     public void climbingClicked(ConnectedThread connectedThread) {
-        byte[] buf;
-        buf = "5".getBytes(Charset.forName("UTF-8"));
-        connectedThread.write(buf);
+        if(connectThread != null) {
+            if (connectThread.mmSocket.isConnected()) {
+                byte[] buf;
+                buf = "5".getBytes(Charset.forName("UTF-8"));
+                connectedThread.write(buf);
+            } else {
+                Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else {
+            Toast.makeText(getApplicationContext(), "You must first connect bluetooth.", Toast.LENGTH_SHORT).show();
+        }
     }
 }
