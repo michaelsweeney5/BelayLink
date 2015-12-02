@@ -44,7 +44,7 @@ void loop()
   char warmUp[7] = {0x00,0xA,0x5,0x00,0xA,0x5,0x00};
   numToSend = 0;
   char message[7] = {'s','t','a','r','t',' ','#'};
-  char echoResponse[7] = {'0','R','0','0','1','6','#'};
+  char echoResponse[7] = {'0','R','0','0','1','G','#'};
   message[2] = dipValue[0];
   message[3] = dipValue[1];
   message[4] = dipValue[2];
@@ -134,7 +134,7 @@ void loop()
       vw_send((uint8_t *)echoResponse, 7);
       vw_wait_tx();
     }
-    else if(buf[5] == '6') {
+    else if(buf[5] == 'G') {
       //received a confirmation response
       digitalWrite(led,HIGH);
       delay(250);
